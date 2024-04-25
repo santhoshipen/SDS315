@@ -1,0 +1,121 @@
+---
+title: "SDS 315--Homework 10"
+author: "Santhoshi Penmetsa (sp48982)"
+output: pdf_document
+date: "2024-04-21"
+---
+
+**[GitHub Link](https://github.com/santhoshipen/SDS315)**
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE,  message = FALSE, echo = FALSE)
+```
+
+```{r}
+# Loading the libraries 
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+library(RColorBrewer)
+library(kableExtra)
+library(mosaic)
+library(MatchIt)
+library(moderndive)
+library(effectsize)
+```
+
+```{r}
+# Loading the datasets
+redlining <- read.csv("redlining.csv")
+groceries <- read.csv("groceries.csv")
+```
+
+# **Problem 1: Redlining**
+
+**Question:** The question we're trying to answer is to asses whether there is an association between the number of FAIR policies and the racial/ethnic composition of a ZIP code, holding the fire, age and income variables constant. 
+
+
+**Approach:** The approach we used was creating a linear regression model that held the variables constant. We calculated the coefficients and confidence interval of the regression model to interpret the association. 
+
+
+**Results:** 
+```{r}
+# Creating a regression model 
+redlining_model = lm(policies ~ minority + fire + age + income, data=redlining) 
+kable(get_regression_table(redlining_model), format = "latex", booktabs = TRUE, caption = "Redlining Regression Table") %>% kable_styling(bootstrap_options = c("striped", "hold_position"), latex_options = c("striped", "hold_position"))
+
+# Plotting the number of policies 
+ggplot(redlining) + geom_histogram(aes(x = policies), color = "black", fill = "hotpink") + labs(title = "Distribution of Policies", x = "Policies", y = "Count")
+```
+
+**Conclusion:** We can conclude that there is an association between the racial/ethnic composition of a ZIP code and number of FAIR policies. When there is a 1% change in minority, the number of FAIR policies per 100 residents increases by 0.008 with a 95% confidence interval of 0.003 to 0.014. In numerical terms, this is not a significant change, but it is also not a small change. For instance, if there was a 50% change in minority instead of 1%, the number of FAIR policies per 100 residents would increase by 0.4. The distribution of policies per 100 residents ranges from 0 to slightly over 2. Thus, this 0.4 increase covers approximately 1/5 of the range of all policies. 
+
+# **Problem 2: Grocery store prices**
+
+## **Part A** 
+
+```{r}
+# Data wrangling to create average prices
+groceries_part_A <- groceries %>%
+  group_by(Store) %>%
+  summarize(AvgPrice = mean(Price))
+
+# Plotting the average prices across stores 
+ggplot(groceries_part_A) + geom_bar(aes( x = Store, y = AvgPrice), stat = "identity", color = "black", fill = "hotpink") + labs(title = "Distribution of Average Prices Across Stores", x = "Stores", y = "Average Price") + coord_flip() + theme_minimal() +  theme(text = element_text(family = "serif", size = 12, face = "bold"))
+```
+
+In the graph above, the average price of all products ranges from 2 to 4 dollars. Specifically, Whole Foods and Wheatsville Co-op have the highest average prices, whereas Fiesta and Walmart have the lowest average prices.
+
+## **Part B** 
+
+```{r fig.height=6, fig.width=7}
+# Data wrangling to create number of stores 
+groceries_part_B <- groceries %>%
+  group_by(Product) %>%
+  summarize(NumOfStores = n())
+
+# Plotting the number of stores 
+ggplot(groceries_part_B) + geom_bar(aes( x = NumOfStores, y = Product), stat = "identity", color = "black", fill = "hotpink") + labs(title = "Distribution of Number of Stores Selling a Product", x = "Number of Stores", y = "Product") + theme_minimal() +  theme(text = element_text(family = "serif"))
+```
+
+The graph above shows the number of stores that sell a particular product. Eggs and milk are sold in all of the stores.
+
+## **Part C** 
+
+```{r}
+# Creating regression model and table 
+groceries_model = lm(Price ~ Product + Type, data=groceries) 
+groceries_lm_table <- get_regression_table(groceries_model)
+```
+
+Compared with ordinary grocery stores (like Albertsons, HEB, or Krogers), convenience stores charge somewhere between
+**0.42** and **0.92** dollars more for the same product.
+
+## **Part D**
+
+```{r}
+# Creating regression model and table 
+groceries_model2 = lm(Price ~ Product + Store, data=groceries) 
+part_d_coef <- coef(groceries_model2)
+```
+
+When comparing the same product (12 Pack Coke), the two stores that seem to charge the lowest prices are **Walmart** (-0.993) and **Kroger Fresh Fare**(-0.902). When comparing the same product( 12 Pack Coke), the two stores that seem to charge the highest prices are **Whole Foods** (0.364) and **Wheatsville Food Co-op**(0.290).  
+
+## **Part E**
+
+Central Market charges a similar amount to HEB for the same product. When comparing their prices, the difference is only **$0.073**, which is relatively small. In contrast, the price difference between Central Market and Whole Foods is about **$0.938**, a significantly larger discrepancy. Therefore, in the larger context, Central Market and HEB seem to charge similar amount for the same product. 
+
+## **Part F** 
+
+```{r}
+# Creating regression model and table 
+groceries <- mutate(groceries, Income10K = Income%/%10000)
+groceries_model3 = lm(Price ~ Product + Income10K, data = groceries)
+part_f_coef <- coef(groceries_model3)
+
+# Outputting the standardized coefficient
+part_f <- standardize_parameters(groceries_model3)
+```
+
+The coefficient of Income10K is **-0.013**. The negative coefficient suggests that as income increases by $10,000, the price for groceries decreases by **$0.013**. In poorer ZIP codes, this means consumers are likely to pay more for the same product compared to those in richer ZIP codes. As income decreases, the price subtracted from the price gets smaller, which leads to higher prices. A one-standard deviation increase in the income of a ZIP code seems to be associated with a **-0.03** standard-deviation change in the price that consumers in that ZIP code expect to pay for the same product. 
